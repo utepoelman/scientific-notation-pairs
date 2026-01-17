@@ -703,7 +703,19 @@
     }
 
     function handleCardClick(card) {
-        if (gameState.isProcessing || card.classList.contains('matched') || card.classList.contains('flipped')) return;
+        if (gameState.isProcessing || card.classList.contains('matched')) return;
+
+        // Correctly handle deselect in open mode
+        if (gameState.mode === 'solo-open') {
+            if (card.classList.contains('selected')) {
+                card.classList.remove('selected');
+                selectedCards = []; 
+                return;
+            }
+        } else {
+            // In memory modes, ignore already flipped cards
+            if (card.classList.contains('flipped')) return;
+        }
 
         if (gameState.mode !== 'solo-open') {
             card.classList.add('flipped');
