@@ -310,11 +310,11 @@
                     </label>
                     <label>
                         <input type="checkbox" value="ops" checked> 
-                        Mult/Div by Powers of 10 (e.g. 6.7 × 0.01)
+                        Multiplying and Dividing by Powers of 10 (e.g. 6.7 × 0.01)
                     </label>
                     <label>
                         <input type="checkbox" value="convert" checked> 
-                        Sci-Notation to Standard (e.g. 4.5 × 10<sup>3</sup>)
+                        Converting Scientific Notation to Standard Form (e.g. 4.5 × 10<sup>3</sup>)
                     </label>
                 </div>
 
@@ -444,11 +444,12 @@
         return Array.from(checkboxes).map(cb => cb.value);
     }
     
+    // Updated to return full, non-abbreviated names
     function getSkillDisplayName(code) {
         const map = {
-            'powers': 'Powers of 10',
-            'ops': 'Ops with Powers',
-            'convert': 'Sci-Not Conversion'
+            'powers': 'Calculating Powers of 10',
+            'ops': 'Multiplying and Dividing by Powers of 10',
+            'convert': 'Converting Scientific Notation to Standard Form'
         };
         return map[code] || code;
     }
@@ -478,13 +479,20 @@
     }
 
     // 2. Mult/Div by Powers of 10
-    // Constraints: Base 1.1-9.9 (1 d.p.), Power 0.001 to 1000
     function genOps() {
         // Base: 1.1 to 9.9
         const baseRaw = getRandomInt(11, 99) / 10;
         
         const isMult = Math.random() > 0.5;
-        const p = getRandomInt(-3, 3); // Covers 10^-3 to 10^3
+        let p;
+
+        if (isMult) {
+            // Multiplication: Any exponent (-6 to 6 for standard range)
+            p = getRandomInt(-6, 6);
+        } else {
+            // Division: Only non-negative exponents: 0 to 4 (1 to 10000)
+            p = getRandomInt(0, 4);
+        }
         
         // Power as a number
         let powerVal = Math.pow(10, p);
@@ -504,9 +512,15 @@
             eq = `${baseRaw} ÷ ${powerStr}`;
         }
         
-        // Format result string cleanly (removing float errors like 0.0670000000001)
-        // Max precision needed is roughly 5 decimal places given our inputs
-        let resStr = parseFloat(val.toPrecision(10)).toString();
+        // Format result string cleanly
+        // Handle float precision for small numbers (e.g. 5.5 * 10^-5)
+        let resStr;
+        if(Math.abs(val) < 0.000001) {
+             // toFixed prevents scientific notation (e.g. 1e-7) from appearing
+             resStr = val.toFixed(Math.abs(p) + 2).replace(/\.?0+$/, "");
+        } else {
+             resStr = parseFloat(val.toPrecision(10)).toString();
+        }
 
         return { eq: formatStr(eq), res: resStr, val: val };
     }
@@ -529,18 +543,14 @@
             // Shift right. Base is X.Y
             // Remove decimal
             let s = base.toString().replace('.', ''); 
-            // We started with 1 decimal place.
             // 1.2 * 10^1 = 12 (shift 1, add 0 zeros)
-            // 1.2 * 10^3 = 1200 (shift 1, add 2 zeros)
             const zeros = exp - 1; 
             if (zeros >= 0) resStr = s + "0".repeat(zeros);
             else {
-               // Technically shouldn't happen with our exp range & base, but safe fallback
                resStr = parseFloat(val.toPrecision(12)).toString();
             }
         } else {
             // Shift left. 1.2 * 10^-1 = 0.12
-            // 1.2 * 10^-3 = 0.0012
             let s = base.toString().replace('.', '');
             const zeros = Math.abs(exp) - 1;
             resStr = "0." + "0".repeat(zeros) + s;
@@ -566,8 +576,7 @@
             else if (skill === 'ops') data = genOps();
             else if (skill === 'convert') data = genConvert();
 
-            // Unique check based on numerical value to avoid collisions
-            // e.g. 100 (Power), 100 (Op), 100 (Convert)
+            // Unique check
             const uniqueKey = data.val.toPrecision(6); 
 
             if (data && !usedResults.has(uniqueKey)) {
